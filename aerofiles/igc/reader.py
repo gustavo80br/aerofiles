@@ -174,8 +174,26 @@ class LowLevelReader:
         decoder = getattr(self, 'decode_%s_record' % record_type)
         if not decoder:
             raise ValueError('Unknown record type')
-
         return decoder
+    
+    @staticmethod
+    def get_H_value(line):
+        try:
+            val = line.split(':')[1].strip()
+            return val or None
+        except:
+            return None
+        
+    @staticmethod
+    def get_splitted_H_value(line, splitter=','):
+        try:
+            clean_val = []
+            val = line.split(':')[1].strip().split(',')
+            for item in val:
+                clean_val = item.strip()
+            return clean_val
+        except:
+            return []
 
     @staticmethod
     def decode_A_record(line):
@@ -348,34 +366,36 @@ class LowLevelReader:
 
         return value
 
+    
+    
     @staticmethod
     def decode_H_utc_date(line):
-        date_str = line[5:11]
+        date_str = LowLeveReader.get_H_value(line)
         return {'utc_date': LowLevelReader.decode_date(date_str)}
 
     @staticmethod
     def decode_H_fix_accuracy(line):
-        fix_accuracy = line[5:].strip()
+        fix_accuracy = LowLeveReader.get_H_value(line)
         return {'fix_accuracy': None} if fix_accuracy == '' else {'fix_accuracy': int(fix_accuracy)}
 
     @staticmethod
     def decode_H_pilot(line):
-        pilot = line[19:].strip()
-        return {'pilot': None} if pilot == '' else {'pilot': pilot}
+        pilot = LowLeveReader.get_H_value(line)
+        return {'pilot': pilot}
 
     @staticmethod
     def decode_H_copilot(line):
-        second_pilot = line[11:].strip()
+        second_pilot = LowLeveReader.get_H_value(line)
         return {'copilot': None} if second_pilot == '' else {'copilot': second_pilot}
 
     @staticmethod
     def decode_H_glider_model(line):
-        glider_model = line[16:].strip()
+        glider_model = LowLeveReader.get_H_value(line)
         return {'glider_model': None} if glider_model == '' else {'glider_model': glider_model}
 
     @staticmethod
     def decode_H_glider_registration(line):
-        glider_registration = line[14:].strip()
+        glider_registration = LowLeveReader.get_H_value(line)
         if glider_registration == '':
             return {'glider_registration': None}
         else:
@@ -383,63 +403,59 @@ class LowLevelReader:
 
     @staticmethod
     def decode_H_gps_datum(line):
-        gps_datum = line[17:].strip()
+        gps_datum = LowLeveReader.get_H_value(line)
         return {'gps_datum': None} if gps_datum == '' else {'gps_datum': gps_datum}
 
     @staticmethod
     def decode_H_firmware_revision(line):
-        firmware_revision = line[21:].strip()
+        firmware_revision = LowLeveReader.get_H_value(line)
         return {'firmware_revision': None} if firmware_revision == '' else {'firmware_revision': firmware_revision}
 
     @staticmethod
     def decode_H_hardware_revision(line):
-        hardware_revision = line[21:].strip()
+        hardware_revision = LowLeveReader.get_H_value(line)
         return {'hardware_revision': None} if hardware_revision == '' else {'hardware_revision': hardware_revision}
 
     @staticmethod
     def decode_H_manufacturer_model(line):
         manufacturer = None
         model = None
-        manufacturer_model = line[12:].strip().split(',')
-        if manufacturer_model[0] != '':
-            manufacturer = manufacturer_model[0].strip()
-        if len(manufacturer_model) == 2 and manufacturer_model[1].lstrip() != '':
-            model = manufacturer_model[1].strip()
+        manufacturer_model = LowLeveReader.get_splitted_H_value(line)
+        if manufacturer_model:
+            manufacturer = manufacturer_model[0]
+        if len(manufacturer_model) == 2 and manufacturer_model[1]:
+            model = manufacturer_model[1]
         return {'logger_manufacturer': manufacturer,
                 'logger_model': model}
 
     @staticmethod
     def decode_H_gps_receiver(line):
 
-        # some IGC files use colon, others don't
-        if line[5] == ':':
-            gps_sensor = line[6:].lstrip().split(',')
-        else:
-            gps_sensor = line[5:].split(',')
+        gps_sensor = LowLeveReader.get_H_value(line).split(',')
 
         manufacturer = None
         model = None
         channels = None
         max_alt = None
         for detail_index, detail in enumerate(reversed(gps_sensor)):
-            if len(gps_sensor) == 1 or (len(gps_sensor) == 2 and gps_sensor[1].strip() == ''):
-                manufacturer = detail.strip()
+            if len(gps_sensor) == 1 or (len(gps_sensor) == 2 and not gps_sensor[1]):
+                manufacturer = detail
             elif len(gps_sensor) == 3:
                 if detail_index == 0:
-                    max_alt = detail.strip()
+                    max_alt = detail
                 elif detail_index == 1:
-                    channels = detail.strip()
+                    channels = detail
                 else:  # detail_index == 2
-                    manufacturer = detail.strip()
+                    manufacturer = detail
             elif len(gps_sensor) == 4:
                 if detail_index == 0:
-                    max_alt = detail.strip()
+                    max_alt = detail
                 elif detail_index == 1:
-                    channels = detail.strip()
+                    channels = detail
                 elif detail_index == 2:
-                    model = detail.strip()
+                    model = detail
                 else:  # detail_index == 3
-                    manufacturer = detail.strip()
+                    manufacturer = detail
             else:
                 raise NotImplementedError
 
@@ -485,16 +501,12 @@ class LowLevelReader:
         model = None
         max_alt = None
 
-        # some IGC files use colon, others don't
-        if line[19] == ':':
-            pressure_sensor = line[20:].strip().split(',')
-        else:
-            pressure_sensor = line[19:].split(',')
-
+        pressure_sensor = LowLeveReader.get_splitted_H_value(line)
+            
         if len(pressure_sensor) == 1:
-            manufacturer = pressure_sensor[0].strip() if pressure_sensor[0] != '' else None
+            manufacturer = pressure_sensor[0] if pressure_sensor[0] != '' else None
         elif len(pressure_sensor) == 2:
-            manufacturer_model = pressure_sensor[0].strip().split(' ') if pressure_sensor[0] != '' else None
+            manufacturer_model = pressure_sensor[0].split(' ') if pressure_sensor[0] != '' else None
 
             if len(manufacturer_model) == 2:
                 manufacturer = manufacturer_model[0]
@@ -502,11 +514,11 @@ class LowLevelReader:
             else:
                 manufacturer = manufacturer_model[0]
 
-            max_alt = pressure_sensor[1].strip() if pressure_sensor[1] != '' else None
+            max_alt = pressure_sensor[1] if pressure_sensor[1] else None
         elif len(pressure_sensor) == 3:
-            manufacturer = pressure_sensor[0].strip() if pressure_sensor[0] != '' else None
-            model = pressure_sensor[1].strip() if pressure_sensor[1] != '' else None
-            max_alt = pressure_sensor[2].strip() if pressure_sensor[2] != '' else None
+            manufacturer = pressure_sensor[0] if pressure_sensor[0] else None
+            model = pressure_sensor[1] if pressure_sensor[1] else None
+            max_alt = pressure_sensor[2] if pressure_sensor[2] else None
 
         # stripping of max from 'max10000m'
         if max_alt is not None and max_alt.startswith('max'):
@@ -537,29 +549,29 @@ class LowLevelReader:
 
     @staticmethod
     def decode_H_competition_id(line):
-        competition_id = line[19:].strip()
+        competition_id = LowLeveReader.get_H_value(line)
         return {'competition_id': None} if competition_id == '' else {'competition_id': competition_id}
 
     @staticmethod
     def decode_H_competition_class(line):
-        competition_class = line[22:].strip()
+        competition_class = LowLeveReader.get_H_value(line)
         return {'competition_class': None} if competition_class == '' else {'competition_class': competition_class}
 
     @staticmethod
     def decode_H_time_zone_offset(line):
-        return {'time_zone_offset': int(float(line[14::].strip()))}
+        return {'time_zone_offset': int(float(LowLeveReader.get_H_value(line)))}
 
     @staticmethod
     def decode_H_mop_sensor(line):
-        return {'mop_sensor': line[12::].strip()}
+        return {'mop_sensor': LowLeveReader.get_H_value(line)}
 
     @staticmethod
     def decode_H_site(line):
-        return {'site': line[10::].strip()}
+        return {'site': LowLeveReader.get_H_value(line)}
 
     @staticmethod
     def decode_H_units_of_measure(line):
-        return {'units_of_measure': line[11::].strip().split(',')}
+        return {'units_of_measure': LowLeveReader.get_splitted_H_value(line)}
 
     @staticmethod
     def decode_I_record(line):
