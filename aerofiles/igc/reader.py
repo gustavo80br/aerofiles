@@ -615,6 +615,9 @@ class LowLevelReader:
     @staticmethod
     def decode_date(date_str):
 
+        if ',' in date_str:
+            date_str = date_str.split(',')[0]
+        
         if len(date_str) != 6:
             raise ValueError('Date string does not have correct length')
         elif date_str == '000000':
