@@ -354,7 +354,7 @@ class LowLevelReader:
             return val or None
         except:
             return None
-        
+
     @staticmethod
     def get_splitted_H_value(line, splitter=','):
         try:
@@ -369,11 +369,15 @@ class LowLevelReader:
     @staticmethod
     def decode_H_utc_date(line):
         date_str = LowLevelReader.get_H_value(line)
+        if not date_str:
+            date_str = line[5:11].strip()
         return {'utc_date': LowLevelReader.decode_date(date_str)}
 
     @staticmethod
     def decode_H_fix_accuracy(line):
         fix_accuracy = LowLevelReader.get_H_value(line)
+        if not fix_accuracy:
+            fix_accuracy = fix_accuracy = line[5:].strip()
         return {'fix_accuracy': None} if fix_accuracy == '' else {'fix_accuracy': int(fix_accuracy)}
 
     @staticmethod
