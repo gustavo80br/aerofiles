@@ -212,9 +212,14 @@ class LowLevelReader:
             start_byte, end_byte = extension['bytes']
             start_byte = start_byte - i - 1
             end_byte = end_byte - i - 1
-
+            
+            try:
+                value = int(ext[start_byte:end_byte + 1])
+            except:
+                value = None
+            
             b_record.update(
-                {extension['extension_type']: int(ext[start_byte:end_byte + 1])}
+                {extension['extension_type']: value}
             )
 
         return b_record
