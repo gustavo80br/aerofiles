@@ -154,6 +154,13 @@ class LowLevelReader:
 
     def next(self):
         for line in self.fp:
+            
+            if isinstance(line, bytes):
+                try:
+                    line = line.decode()
+                except UnicodeDecodeError:
+                    line = line.decode('latin1')
+            
             self.line_number += 1
 
             record_type = line[0]
